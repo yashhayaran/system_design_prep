@@ -1,4 +1,3 @@
-
 #include <string>
 #include <functional>
 #include <chrono>
@@ -13,9 +12,7 @@
 #include <sstream>
 #include <random>
 #include <chrono>
-
 #include <assert.h>
-
 
 class LRUCleanable
 {
@@ -34,24 +31,32 @@ template <typename T, typename PK/*primary_key*/>
 class LRUCacheElement
 {
 private:
-    int64_t mLastAccessTime = 0;
-    int64_t mSize = 0;
-    std::weak_ptr<T> mWeakPointerElement;
-    PK mPrimaryKey;
-    typename std::list<std::shared_ptr<LRUCacheElement<T,PK> > >::iterator mElementInListItr;
+    int64_t mLastAccessTime = 0;                // Last time when accessed?
+    int64_t mSize = 0;                          // Size of the element 
+    std::weak_ptr<T> mWeakPointerElement;       // Weak pointer to element
+    PK mPrimaryKey;                             // Primary Key, int type 
+    typename    std::list<
+                    std::shared_ptr<
+                        LRUCacheElement<T,PK>
+                    >
+                >::iterator mElementInListItr;  // Iterator: shared pointer of type 'LRUCacheElement<T,PK>'
+    bool mMarkSizeWiseCleanup = false;
 
 public:
     LRUCacheElement(std::shared_ptr<T> element, PK primaryKey)
-        : mWeakPointerElement(element), mPrimaryKey(primaryKey)
-    {}
+        : mWeakPointerElement(element), mPrimaryKey(primaryKey), mMarkSizeWiseCleanup(false)
+    { }
+    
     void updateAccessTime()
     {
         mLastAccessTime = std::time(nullptr);
     }
-    void setElementInListItr(const typename std::list<std::shared_ptr<LRUCacheElement<T,PK> > >::iterator &elementInListItr)
+    
+    void setElementInListItr(const typename std::list<std::shared_ptr<LRUCacheElement<T, PK> > >::iterator &elementInListItr)
     {
         mElementInListItr = elementInListItr;
     }
+    
     typename std::list<std::shared_ptr<LRUCacheElement<T,PK> > >::iterator elementInListItr() const
     {
         return mElementInListItr;
@@ -75,7 +80,23 @@ public:
     PK primaryKey() const
     {
         return mPrimaryKey;
-    }};
+    }
+
+    int64_t getAccessTime() const
+    {
+        return mLastAccessTime;
+    }
+
+    void setMarkSizeWiseCleanup(const bool& bMark)
+    {
+        mMarkSizeWiseCleanup = bMark;
+    }
+
+    bool getMarkSizeWiseCleanup() const
+    {
+        return mMarkSizeWiseCleanup;
+    }
+};
 
 
 /**
@@ -93,8 +114,8 @@ template <typename T, typename PK/*primary_key*/>
 class LRUCache {
     static_assert(std::is_base_of<LRUCleanable, T>::value, "T must derive from LRUCleanable");
 private:
-    std::list<std::shared_ptr<LRUCacheElement<T,PK > > > mListOfElements; //to keep order
-    std::map<PK,std::shared_ptr<LRUCacheElement<T,PK > > > mMapOfElements; //To ease the search
+    std::list<std::shared_ptr<LRUCacheElement<T,PK>>> mListOfElements; //to keep order
+    std::map<PK,std::shared_ptr<LRUCacheElement<T,PK>>> mMapOfElements; //To ease the search
     int64_t mTotalSize = 0;
     int64_t mMaxSizeSoft = 0; //scheduled cleaner will act on this
     int64_t mMaxSizeHard = 0; //cache won't be allowed to exceed this
@@ -164,13 +185,13 @@ public:
         {
             std::lock_guard<std::mutex> g(elementsMutex);
 
-            std::shared_ptr<LRUCacheElement<T,PK> > cacheElement;
+            std::shared_ptr<LRUCacheElement<T,PK>> cacheElement;
 
             auto itrMap = mMapOfElements.find(key);
             if (itrMap == mMapOfElements.end())
             {
-                cacheElement = std::make_shared<LRUCacheElement<T,PK> >(element, key);
-                mMapOfElements.insert(std::pair<PK,std::shared_ptr<LRUCacheElement<T,PK> > >(key, cacheElement));
+                cacheElement = std::make_shared<LRUCacheElement<T,PK>>(element, key);
+                mMapOfElements.insert(std::pair<PK,std::shared_ptr<LRUCacheElement<T,PK>>>(key, cacheElement));
             }
             else //remove from list to reorder when inserting
             {
@@ -198,7 +219,7 @@ public:
     {
         std::lock_guard<std::mutex> g(elementsMutex);
 
-        std::shared_ptr<LRUCacheElement<T, PK> > cacheElement;
+        std::shared_ptr<LRUCacheElement<T, PK>> cacheElement;
 
         auto itrMap = mMapOfElements.find(key);
         if (itrMap != mMapOfElements.end()) //remove from set to reorder when inserting
@@ -213,7 +234,7 @@ public:
 
     void cleanup(const PK *keyToSaveFromPurge = nullptr)
     {
-        std::vector<std::shared_ptr<LRUCleanable> > toClean;
+        std::vector<std::shared_ptr<LRUCleanable>> toClean;
         {
             std::lock_guard<std::mutex> g(elementsMutex);
             while (mListOfElements.size() &&  mTotalSize > mMaxSizeSoft)
