@@ -1,0 +1,22 @@
+Task 1:
+
+Imagine std::string did not exist and you need to write a string class really quick with just the most basic functionality. Design and implement it (no need to split it into header and source files, just put the code into the class declaration - hopefully it should come to less than a page of code).
+
+
+Task 2: Attached there are two source files of a simple program.
+
+The program features a cache of elements that gets removed (cleaned) after reached certain threshold or periodically with some soft limit that indicate how many elements will be there after removing.
+
+Your job is:
+1 - compile the program and explain the output produced
+2 - Extend this class to have a cache that takes into account the size of an element.
+
+The idea is to include in LRUCache a time threshold below which the criteria to consider cleaning is the size of the LRUCleanable: the biggest elements should be cleaned first.
+
+e.g: imagine the threshold is 24 hours: all instances updated before the last 24 hours, should be cleaned considering size. Once all elements updated before the last 24 hours have been deleted, LRU (last recently updated) should be the only criteria: the oldest gets removed first regardless of the size.
+
+
+Note: 
+Efficienty matters: you should try to avoid looping through all the elements everytime you want to select candidates for cleaning. The cache only stores pointers and a couple of variables, so, memory is not an issue.
+
+If you don't have time to code the solution, please consider writting your ideas on how you'd solve it.
